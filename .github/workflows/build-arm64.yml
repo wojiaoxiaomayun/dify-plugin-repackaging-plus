@@ -1,0 +1,48 @@
+name: Build ARM64 Offline Difypkg
+
+on:
+  # 手动触发，支持自定义参数
+  workflow_dispatch:
+    inputs:
+      difypkg_file:
+        description: 'difypkg 文件名（需放在仓库根目录）'
+        required: true
+        default: 'langgenius-agent_0.0.39.difypkg'
+        type: string
+
+  # push 到 main 时也自动构建
+  push:
+    branches: [main]
+
+jobs:
+  build-arm64:
+    name: Repackage for ARM64
+    runs-on: ubuntu-24.04-arm   # GitHub 托管的 ARM64 runner
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y unzip
+
+      - name: Run plugin repackaging (ARM64)
+        run: |
+          chmod +x plugin_repackaging.sh
+          chmod +x dify-plugin-linux-arm64-5g
+          bash plugin_repackaging.sh local ${{ inputs.difypkg_file || 'langgenius-agent_0.0.39.difypkg' }}
+
+      - name: Upload ARM64 difypkg artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: langgenius-agent-arm64-offline
+          path: '*-offline.difypkg'
+          if-no-files-found: error
+          retention-days: 30
