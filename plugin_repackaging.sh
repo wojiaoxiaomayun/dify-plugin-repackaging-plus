@@ -1,6 +1,8 @@
 #!/bin/bash
 # author: Junjie.M
 
+set -euo pipefail
+
 GITHUB_API_URL=https://github.com
 ARKETPLACE_API_URL=https://marketplace.dify.ai
 PIP_MIRROR_URL=https://mirrors.aliyun.com/pypi/simple
@@ -14,7 +16,7 @@ CURR_DIR=`pwd`
 USER=`whoami`
 
 market(){
-  if [[ -z "$2" || -z "$3" || -z "$4" ]]; then
+  if [[ -z "${2:-}" || -z "${3:-}" || -z "${4:-}" ]]; then
         echo ""
         echo "Usage: "$0" market [plugin author] [plugin name] [plugin version]"
         echo "Example:"
@@ -40,7 +42,7 @@ market(){
 }
 
 github(){
-  if [[ -z "$2" || -z "$3" || -z "$4" ]]; then
+  if [[ -z "${2:-}" || -z "${3:-}" || -z "${4:-}" ]]; then
         echo ""
         echo "Usage: "$0" github [Github repo] [Release title] [Assets name (include .difypkg suffix)]"
         echo "Example:"
@@ -70,8 +72,8 @@ github(){
 }
 
 _local(){
-  echo $2
-  if [[ -z "$2" ]]; then
+  echo ${2:-}
+  if [[ -z "${2:-}" ]]; then
         echo ""
         echo "Usage: "$0" local [difypkg path]"
         echo "Example:"
@@ -91,21 +93,21 @@ repackage(){
 	echo "Unziping ..."
 	install_unzip
 	unzip -o ${PACKAGE_PATH} -d ${CURR_DIR}/${PACKAGE_NAME}
-	if [[ $? -ne 0 ]]; then
-    echo "Unzip failed."
-    exit 1
-  fi
 	echo "Unzip success."
 	echo "Repackaging ..."
 	cd ${CURR_DIR}/${PACKAGE_NAME}
+  rm -rf ./wheels
 	pip download -r requirements.txt -d ./wheels --index-url ${PIP_MIRROR_URL}
-	sed -i '1i\--no-index --find-links=./wheels/' requirements.txt
+  sed -i '1i\--find-links=./wheels/' requirements.txt
+  sed -i '1i\--no-index' requirements.txt
+  rm -f pyproject.toml uv.lock
 	if [ -f .difyignore ]; then
 	  sed -i '/^wheels\//d' .difyignore
 	fi
 	cd ${CURR_DIR}
 	chmod 755 ${CURR_DIR}/${ARCH}
 	${CURR_DIR}/${ARCH} plugin package ${CURR_DIR}/${PACKAGE_NAME} -o ${CURR_DIR}/${PACKAGE_NAME}-offline.difypkg
+  test -f ${CURR_DIR}/${PACKAGE_NAME}-offline.difypkg
 	echo "Repackage success."
 }
 
@@ -120,7 +122,7 @@ install_unzip(){
 		fi
 	fi
 }
-case "$1" in
+case "${1:-}" in
 	'market')
 	market $@
 	;;
